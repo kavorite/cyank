@@ -95,7 +95,7 @@ func main() {
 	uri := os.Args[1]
 	req, err := provisionDownload(uri)
 	ctx.fck(err)
-	shards := req.shard(4)
+	shards := req.shard(16)
 	retrievalsPending := int32(len(shards))
 	bytesRetrieved := uint64(0)
 	payloadSink := make(chan struct{i int; content []byte}, len(shards))
