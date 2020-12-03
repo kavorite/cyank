@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"time"
 	"io"
 	"fmt"
 	"net/http"
@@ -72,6 +73,20 @@ func provisionDownload(uri string) (*downloadProvision, *errors.Error) {
 	return &downloadProvision{uri, rsp}, nil
 }
 
+type writerCounter struct {
+	io.Writer
+	progress *uint64
+}
+
+func (ostrm *writerCounter) Write(p []byte) (n int, err error) {
+	n, err = ostrm.Writer.Write(p)
+	if err != nil {
+		return
+	}
+	atomic.AddUint64(ostrm.progress, uint64(n))
+	return
+}
+
 func main() {
 	uri := os.Args[1]
 	ctx := opCtx{"concurrently download ranges of content URL"}
@@ -79,12 +94,14 @@ func main() {
 	ctx.fck(err)
 	shards := req.shard(16)
 	retrievalsPending := int32(len(shards))
+	bytesRetrieved := uint64(0)
 	payloadSink := make(chan struct{i int; content []byte}, len(shards))
 	for i, shard := range shards {
-		go func(i int, shard contentShard) {	
+		go func(i int, shard contentShard) {
 			buf := bytes.Buffer{}
 			buf.Grow(int(shard.end-shard.start))
-			ctx.fck(errors.Wrap(shard.yank(&buf), 0))
+			ctr := writerCounter{&buf, &bytesRetrieved}
+			ctx.fck(errors.Wrap(shard.yank(&ctr), 0))
 			payloadSink <- struct{i int; content []byte}{i, buf.Bytes()}
 			atomic.AddInt32(&retrievalsPending, -1)
 			if pending := atomic.LoadInt32(&retrievalsPending); pending == 0 {
@@ -92,6 +109,21 @@ func main() {
 			}
 		}(i, shard)
 	}
+	go func() {
+		for range time.NewTicker(time.Millisecond * 100).C {
+			bar := []byte("[                        ]")
+			status := atomic.LoadUint64(&bytesRetrieved)
+			goal := req.head.ContentLength
+			progress := float64(status) / float64(goal)
+			for i := 1; i < int(24*progress)+1; i++ {
+				bar[i] = '#'
+			}
+			fmt.Fprintf(os.Stderr, "%s (%.2f%%; %d/%dB)\r", string(bar), progress * 100, status, goal)
+			if status == uint64(goal) {
+				return
+			}
+		}
+	}()
 	chunks := make([]io.Reader, len(shards))
 	flushNext := 0
 	for payload := range payloadSink {
