@@ -88,8 +88,11 @@ func (ostrm *writerCounter) Write(p []byte) (n int, err error) {
 }
 
 func main() {
+	ctx := opCtx{"shard and retrieve resource fragments"}
+	if len(os.Args) <= 1 {
+		ctx.fck(errors.New("no resource requested"))
+	}
 	uri := os.Args[1]
-	ctx := opCtx{"concurrently download ranges of content URL"}
 	req, err := provisionDownload(uri)
 	ctx.fck(err)
 	shards := req.shard(16)
