@@ -106,8 +106,7 @@ func main() {
 			ctr := writerCounter{&buf, &bytesRetrieved}
 			ctx.fck(errors.Wrap(shard.yank(&ctr), 0))
 			payloadSink <- struct{i int; content []byte}{i, buf.Bytes()}
-			atomic.AddInt32(&retrievalsPending, -1)
-			if pending := atomic.LoadInt32(&retrievalsPending); pending == 0 {
+			if pending := atomic.AddInt32(&retrievalsPending, -1); pending == 0 {
 				close(payloadSink)
 			}
 		}(i, shard)
