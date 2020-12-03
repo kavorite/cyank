@@ -1,6 +1,6 @@
 # cyank
 
-It can take a long while to download files from the Internet. But, if the server that you're downloading from supports [ranges](http-ranges), and particularly if the resource you're accessing is backed by a load-balancer rather than a single server, `cyank` (**c**oncurrent **yank**) can probably help. It shards the request for the resource given on its first command line argument into sixteen separate such requests for contiguous fragments of the resource, and dumps them to stdout as they become available, such that the requested payload arrives intact. Invoke it like so:
+It can take a long while to download files from the Internet. But, if the server that you're downloading from supports [ranges][http-ranges], and particularly if the resource you're accessing is backed by a load-balancer rather than a single server, `cyank` (**c**oncurrent **yank**) can probably help. It shards the request for the resource given on its first command line argument into sixteen separate such requests for contiguous fragments of the resource, and dumps them to stdout as they become available, such that the requested payload arrives intact. Invoke it like so:
 
 ```
 $ ./cyank http://files.grouplens.org/datasets/movielens/ml-25m.zip > output.zip
