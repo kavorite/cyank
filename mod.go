@@ -95,7 +95,7 @@ func main() {
 	uri := os.Args[1]
 	req, err := provisionDownload(uri)
 	ctx.fck(err)
-	shards := req.shard(16)
+	shards := req.shard(4)
 	retrievalsPending := int32(len(shards))
 	bytesRetrieved := uint64(0)
 	payloadSink := make(chan struct{i int; content []byte}, len(shards))
@@ -129,17 +129,18 @@ func main() {
 		}
 	}()
 	chunks := make([]io.Reader, len(shards))
-	flushNext := 0
 	for payload := range payloadSink {
-		chunks[payload.i] = bytes.NewReader(payload.content)
-		if payload.i != flushNext {
+		flushed := len(shards) - len(chunks)
+		k := payload.i - flushed
+		chunks[k] = bytes.NewReader(payload.content)
+		if k != 0 {
 			continue
 		}
-		for flushNext < len(chunks) && chunks[flushNext] != nil {
-			_, err := io.Copy(os.Stdout, chunks[flushNext])
-			chunks[flushNext] = nil
+		for k < len(chunks) && chunks[k] != nil {
+			_, err := io.Copy(os.Stdout, chunks[k])
 			ctx.fck(errors.Wrap(err, 0))
-			flushNext++
+			k++
 		}
+		chunks = chunks[k:]
 	}
 }
