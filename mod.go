@@ -46,7 +46,7 @@ func (target downloadProvision) shard(concurrency int) (shards []contentShard) {
 	shardLength := target.head.ContentLength / int64(concurrency)
 	for i := 0; i < concurrency; i++ {
 		start := int64(i) * shardLength
-		end := start + shardLength
+		end := start + shardLength-1
 		if i == concurrency-1 {
 			end = target.head.ContentLength
 		}
