@@ -76,9 +76,7 @@ func main() {
 	uri := os.Args[1]
 	ctx := opCtx{"concurrently download ranges of content URL"}
 	req, err := provisionDownload(uri)
-	if err != nil {
-		panic(err)
-	}
+	ctx.fck(err)
 	shards := req.shard(16)
 	retrievalsPending := int32(len(shards))
 	payloadSink := make(chan struct{i int; content []byte}, len(shards))
@@ -95,24 +93,17 @@ func main() {
 		}(i, shard)
 	}
 	chunks := make([]io.Reader, len(shards))
+	flushNext := 0
 	for payload := range payloadSink {
-		flushed := len(shards) - len(chunks)
-		k := payload.i - flushed
-		chunks[k] = bytes.NewReader(payload.content)
-		canFlush := true
-		for _, istrm := range chunks[:k] {
-			canFlush = istrm != nil
-			if !canFlush {
-				break
-			}
-		}
-		if !canFlush {
+		chunks[payload.i] = bytes.NewReader(payload.content)
+		if payload.i != flushNext {
 			continue
 		}
-		for _, istrm := range chunks[:k] {
-			_, err := io.Copy(os.Stdout, istrm)
+		for flushNext < len(chunks) && chunks[flushNext] != nil {
+			_, err := io.Copy(os.Stdout, chunks[flushNext])
+			chunks[flushNext] = nil
 			ctx.fck(errors.Wrap(err, 0))
+			flushNext++
 		}
-		chunks = chunks[k+1:]
 	}
 }
