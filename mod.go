@@ -120,6 +120,7 @@ func main() {
 			}
 			fmt.Fprintf(os.Stderr, "%s (%.2f%%; %d/%dB)\r", string(bar), progress * 100, status, goal)
 			if status == uint64(goal) {
+				fmt.Println()
 				return
 			}
 		}
